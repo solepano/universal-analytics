@@ -19,7 +19,7 @@ describe("ua", function () {
 		var post;
 
 		beforeEach(function () {
-			post = sinon.stub(request, "post").callsArg(1);
+			post = sinon.stub(request, "post").callsArg(2);
 		});
 
 		afterEach(function () {
@@ -70,6 +70,33 @@ describe("ua", function () {
 			visitor.send(fn);
 		})
 
+		it("should add user agent to request header", function (done) {
+			var params = [{userAgent: "Test User Agent"}];
+
+			var fn = sinon.spy(function () {
+				fn.calledOnce.should.equal(true, "callback should have been called once")
+				fn.thisValues[0].should.equal(visitor, "callback should be called in the context of the visitor instance");
+
+				post.callCount.should.equal(1, "params should have been POSTed");
+
+				var parsedUrl = url.parse(post.args[0][0]);
+				var options = post.args[0][1];
+				Math.random(); // I have absolutely no idea why it fails unless there was some processing to be done after url.parse…
+
+				(parsedUrl.protocol + "//" + parsedUrl.host).should.equal(config.hostname);
+				parsedUrl.query.should.equal("","userAgent must be deleted from params");
+
+				options.should.have.keys(["headers"]);
+				options.headers.should.have.key("User-Agent");
+				options.headers["User-Agent"].should.equal("Test User Agent");
+
+				done();
+			});
+
+			var visitor = ua();
+			visitor._queue.push.apply(visitor._queue, params)
+			visitor.send(fn);
+		})
 	})
 
 });
